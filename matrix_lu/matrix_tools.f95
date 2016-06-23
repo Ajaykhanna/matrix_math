@@ -75,7 +75,7 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	101 format(a) ! plain text descriptor
 	
 	! Doolittle Algorithm
-	! See Notre Dame PDF
+	! See wiki PDF
 	
 	if (row .ne. col) stop('LU decomposition is only defined for squqre matricies')
 	allocate(lower(row,col),upper(row,col))

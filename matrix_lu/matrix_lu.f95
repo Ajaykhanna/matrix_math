@@ -2,13 +2,14 @@ program matrixlu
 use matrixtools
 IMPLICIT NONE
 
-real(8),allocatable,dimension(:,:) :: mat, lower, upper, ansmat
-real(8) :: first_sum, second_sum, third_sum, fourtH_sum
-integer :: ios, row, col, i, j, t, ansrow, anscol
+real(8),allocatable,dimension(:,:) :: mat, lower, upper
+real(8) :: det_mat
+integer :: ios, row, col, i
 character(80) :: fname
 ! logical :: decomp_check
 
 101 format(a) ! plain text descriptor
+102 format(e12.6) ! exponential notation, length = 12, decimal = 6
 
 ! take input of matrix file name
 write(*,101) 'matrix file must have (row,col) in first line'
@@ -28,62 +29,12 @@ do i = 1,row
 enddo
 write(*,101) 'echo matrix input'
 call matrixwrite(row,col,mat)
-write(*,101)
 
-! make sure matrix is square
-if (row .ne. col) stop('LU decomposition is only defined for square matricies')
-
-lower(:,:) = 0.0d0
-upper(:,:) = 0.0d0
-do i = 1,row
-	lower(i,i) = 1.0d0
-enddo
-
-! call matrixwrite(row,col,lower)
-! write(*,*)
-! call matrixwrite(row,col,upper)
-
-upper(1,:) = mat(1,:)
-lower(:,1) = mat(:,1) / upper(1,1)
-do i = 2,(row - 1)
-	first_sum = 0.0d0
-	second_sum = 0.0d0
-	third_sum = 0.0d0
-	do t = 1,(i - 1)
-		first_sum = first_sum + (lower(i,t) * upper(t,i))
-	enddo
-	upper(i,i) = mat(i,i) - first_sum
-	do j = (i + 1),row
-		do t = 1,(i - 1)
-			second_sum = second_sum + (lower(i,t) * upper(t,j))
-			third_sum = third_sum + (lower(j,t) * upper(t,i))
-		enddo
-		upper(i,j) = mat(i,j) - second_sum
-		lower(j,i) = (mat(j,i) - third_sum) / upper(i,i)
-	enddo
-enddo
-fourth_sum = 0.0d0
-do t = 1,(row - 1)
-	fourth_sum = fourth_sum + (lower(row,t) * upper(t,col))
-enddo
-upper(row,col) = mat(row,col) - fourth_sum
-
-call matrixwrite(row,col,upper)
-write(*,*)
+call matrixdecompose(row,col,mat,lower,upper)
 call matrixwrite(row,col,lower)
+call matrixwrite(row,col,upper)
 
-call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
-write(*,*)
-call matrixwrite(ansrow,anscol,ansmat)
-! decomp_check = .false.
-do i = 1,col
-	do j = 1,row
-		if (ansmat(i,j) .ne. mat(i,j)) then
-			! decomp_check = .true.
-			write(*,'(2i3)') i,j
-			stop('didnt work')
-		endif
-	enddo
-enddo
-		
+call matrixdet(row,col,mat,det_mat)
+write(*,102) det_mat
+
 endprogram matrixlu

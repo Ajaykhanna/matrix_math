@@ -18,6 +18,8 @@ subroutine matrixwrite(row,col,mat)
 		enddo
 		write(*,101) ']'
 	enddo
+	write(*,101) ! blank line
+	
 endsubroutine matrixwrite
 
 subroutine matrixmul(row1,col1,mat1,row2,col2,mat2,rowans,colans,ansmat)
@@ -58,6 +60,83 @@ subroutine matrixmul(row1,col1,mat1,row2,col2,mat2,rowans,colans,ansmat)
 			enddo
 		enddo
 	enddo
-endsubroutine
+endsubroutine matrixmul
 
+subroutine matrixdecompose(row,col,mat,lower,upper)
+	IMPLICIT NONE
+	integer,intent(in) :: row, col
+	integer :: ansrow, anscol
+	integer :: i, j, k, w
+	real(8),dimension(:,:),intent(in) :: mat
+	real(8),dimension(:,:),intent(out),allocatable :: upper, lower
+	real(8),dimension(:,:),allocatable :: ansmat
+	real(8) :: asum, bsum
+	
+	101 format(a) ! plain text descriptor
+	
+	! Doolittle Algorithm
+	! See Notre Dame PDF
+	
+	if (row .ne. col) stop('LU decomposition is only defined for squqre matricies')
+	allocate(lower(row,col),upper(row,col))
+	lower(:,:) = 0.0d0
+	upper(:,:) = 0.0d0
+	do i = 1,row
+		lower(i,i) = 1.0d0
+	enddo
+	
+	do i = 1,row
+		do j = i,row
+			asum = 0.0d0
+			do w = 1,(i - 1)
+				asum = asum + lower(i,w) * upper(w,j)
+			enddo
+			upper(i,j) = mat(i,j) - asum
+		enddo
+		do k = 1,col
+			bsum = 0.0d0
+			do w = 1,(i - 1)
+				bsum = bsum + lower(k,w) * upper(w,i)
+			enddo
+			lower(k,i) = (mat(k,i) - bsum) / upper(i,i)
+		enddo
+	enddo
+	
+	! Multiply L * U to make sure it worked
+	! TO-DO: Remove this later
+	! call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
+	! call matrixwrite(ansrow,anscol,ansmat)
+	! do i = 1,col
+		! do j = 1,row
+			! if (ansmat(i,j) .ne. mat(i,j)) then
+				! write(*,'(2i3)') i,j
+				! stop('didnt work')
+			! endif
+		! enddo
+	! enddo
+	! write(*,101) 'decomposition successful'
+	
+endsubroutine matrixdecompose
+
+subroutine matrixdet(row,col,mat,det_mat)
+	IMPLICIT NONE
+	integer,intent(in) :: row, col
+	integer :: i
+	real(8),dimension(:,:),intent(in) :: mat
+	real(8),intent(out) :: det_mat
+	real(8),dimension(:,:),allocatable :: lower, upper
+	
+	if (row .ne. col) stop('determinant only defined for square matricies')
+	
+	! First, decompose the matrix
+	call matrixdecompose(row,col,mat,lower,upper)
+	! determinant of a triangular matrix is the multiplication of the "angle"
+	! det_lower = 1.0d0 ! definition from Doolittle algorithm
+	det_mat = 1.0d0
+	do i = 1,row
+		det_mat = det_mat * upper(i,i)
+	enddo
+
+endsubroutine matrixdet
+	
 endmodule matrixtools

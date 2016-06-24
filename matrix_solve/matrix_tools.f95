@@ -1,6 +1,8 @@
 module matrixtools
 IMPLICIT NONE
 
+
+
 contains
 subroutine matrixwrite(row,col,mat)
 	IMPLICIT NONE
@@ -104,17 +106,17 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	
 	! Multiply L * U to make sure it worked
 	! TO-DO: Remove this later
-	! call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
-	! call matrixwrite(ansrow,anscol,ansmat)
-	! do i = 1,col
-		! do j = 1,row
-			! if (ansmat(i,j) .ne. mat(i,j)) then
-				! write(*,'(2i3)') i,j
-				! stop('didnt work')
-			! endif
-		! enddo
-	! enddo
-	! write(*,101) 'decomposition successful'
+	call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
+	do i = 1,col
+		do j = 1,row
+			if (ansmat(i,j) .ne. mat(i,j)) then
+				write(*,'(2i3)') i,j
+				stop('didnt work')
+			endif
+		enddo
+	enddo
+	write(*,101) 'decomposition successful'
+	write(*,*)
 	
 endsubroutine matrixdecompose
 
@@ -144,18 +146,19 @@ subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
 	integer,intent(in) :: row_coeff, col_coeff, row_ans, col_ans
 	integer :: i, j
 	real(8),dimension(:,:),intent(in) :: coeff, ans
-	real(8),dimension(:),intent(out),allocatable :: sol, y
+	real(8),dimension(:),intent(out),allocatable :: sol
+	real(8),dimension(:),allocatable :: y
 	real(8) :: lower_sum, upper_sum
-	real(8),dimension(:,:) :: lower, upper
+	real(8),dimension(:,:),allocatable :: lower, upper
 	
 	if ((col_coeff .ne. row_ans) .or. (col_ans .ne. 1)) stop('not sure that is a linear system...')
 	
-	allocate(sol(row),y(row))
+	allocate(sol(row_coeff),y(row_coeff))
 	
-	call matrixdecompose(row,col,coeff,lower,upper)
+	call matrixdecompose(row_coeff,col_coeff,coeff,lower,upper)
 	
 	! forward subtitution (lower matrix)
-	do i = 1,row
+	do i = 1,row_coeff
 		lower_sum = 0.0d0
 		do j = 1,(i - 1)
 			lower_sum = lower_sum + lower(i,j) * y(j)
@@ -164,9 +167,9 @@ subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
 	enddo
 	
 	! backward subtitution (upper matrix)
-	do i = row,1,-1
+	do i = row_coeff,1,-1
 		upper_sum = 0.0d0
-		do j = i, (row - 1)
+		do j = i, (row_coeff - 1)
 			upper_sum = upper_sum + upper(i,j) * sol(j)
 		enddo
 		sol(i) = (y(i) - upper_sum) / upper(i,i)

@@ -138,5 +138,40 @@ subroutine matrixdet(row,col,mat,det_mat)
 	enddo
 
 endsubroutine matrixdet
+
+subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
+	IMPLICIT NONE
+	integer,intent(in) :: row_coeff, col_coeff, row_ans, col_ans
+	integer :: i, j
+	real(8),dimension(:,:),intent(in) :: coeff, ans
+	real(8),dimension(:),intent(out),allocatable :: sol, y
+	real(8) :: lower_sum, upper_sum
+	real(8),dimension(:,:) :: lower, upper
+	
+	if ((col_coeff .ne. row_ans) .or. (col_ans .ne. 1)) stop('not sure that is a linear system...')
+	
+	allocate(sol(row),y(row))
+	
+	call matrixdecompose(row,col,coeff,lower,upper)
+	
+	! forward subtitution (lower matrix)
+	do i = 1,row
+		lower_sum = 0.0d0
+		do j = 1,(i - 1)
+			lower_sum = lower_sum + lower(i,j) * y(j)
+		enddo
+		y(i) = (ans(i,1) - lower_sum) !/ lower(i,i)
+	enddo
+	
+	! backward subtitution (upper matrix)
+	do i = row,1,-1
+		upper_sum = 0.0d0
+		do j = i, (row - 1)
+			upper_sum = upper_sum + upper(i,j) * sol(j)
+		enddo
+		sol(i) = (y(i) - upper_sum) / upper(i,i)
+	enddo
+
+endsubroutine matrixsolve
 	
 endmodule matrixtools

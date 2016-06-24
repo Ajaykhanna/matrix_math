@@ -8,7 +8,7 @@ subroutine matrixwrite(row,col,mat)
 	integer              :: r, c
 	real(8), intent(in)  :: mat(:,:)
 	
-	101 format(a)     ! plain text descriptor
+	101 format(a)       ! plain text descriptor
 	102 format(e12.6,x) ! exponential, length = 12, decimal = 6, follow w/ space
 	
 	do r = 1, row
@@ -104,17 +104,17 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	
 	! Multiply L * U to make sure it worked
 	! TO-DO: Remove this later
-	! call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
-	! call matrixwrite(ansrow,anscol,ansmat)
-	! do i = 1,col
-		! do j = 1,row
-			! if (ansmat(i,j) .ne. mat(i,j)) then
-				! write(*,'(2i3)') i,j
-				! stop('didnt work')
-			! endif
-		! enddo
-	! enddo
-	! write(*,101) 'decomposition successful'
+	call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
+	do i = 1,col
+		do j = 1,row
+			if (ansmat(i,j) .ne. mat(i,j)) then
+				write(*,'(2i3)') i,j
+				stop('didnt work')
+			endif
+		enddo
+	enddo
+	write(*,101) 'decomposition successful'
+	write(*,*)
 	
 endsubroutine matrixdecompose
 
@@ -129,6 +129,8 @@ subroutine matrixdet(row,col,mat,det_mat)
 	if (row .ne. col) stop('determinant only defined for square matricies')
 	
 	! First, decompose the matrix
+	lower(:,:) = 0.0d0
+	upper(:,:) = 0.0d0
 	call matrixdecompose(row,col,mat,lower,upper)
 	! determinant of a triangular matrix is the multiplication of the "angle"
 	! det_lower = 1.0d0 ! definition from Doolittle algorithm
@@ -138,5 +140,42 @@ subroutine matrixdet(row,col,mat,det_mat)
 	enddo
 
 endsubroutine matrixdet
+
+subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
+	IMPLICIT NONE
+	integer,intent(in) :: row_coeff, col_coeff, row_ans, col_ans
+	integer :: i, j
+	real(8),dimension(:,:),intent(in) :: coeff, ans
+	real(8),dimension(:),intent(out),allocatable :: sol
+	real(8),dimension(:),allocatable :: y
+	real(8) :: lower_sum, upper_sum
+	real(8),dimension(:,:),allocatable :: lower, upper
+	
+	if ((col_coeff .ne. row_ans) .or. (col_ans .ne. 1)) stop('not sure that is a linear system...')
+	
+	allocate(sol(row_coeff),y(row_coeff))
+	lower(:,:) = 0.0d0
+	upper(:,:) = 0.0d0
+	call matrixdecompose(row_coeff,col_coeff,coeff,lower,upper)
+	
+	! forward subtitution (lower matrix)
+	do i = 1,row_coeff
+		lower_sum = 0.0d0
+		do j = 1,(i - 1)
+			lower_sum = lower_sum + lower(i,j) * y(j)
+		enddo
+		y(i) = (ans(i,1) - lower_sum) !/ lower(i,i)
+	enddo
+	
+	! backward subtitution (upper matrix)
+	do i = row_coeff,1,-1
+		upper_sum = 0.0d0
+		do j = i, (row_coeff - 1)
+			upper_sum = upper_sum + upper(i,j) * sol(j)
+		enddo
+		sol(i) = (y(i) - upper_sum) / upper(i,i)
+	enddo
+
+endsubroutine matrixsolve
 	
 endmodule matrixtools

@@ -187,5 +187,28 @@ subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
 	enddo
 
 endsubroutine matrixsolve
+
+subroutine matrixread(unit_num,fname,row,col,mat)
+	IMPLICIT NONE
+	integer,intent(in) :: unit_num
+	integer,intent(out) :: row,col
+	integer :: ios,i
+	real(8),intent(out),dimension(:,:),allocatable :: mat
+	character(80),intent(in) :: fname
+	
+	! matrix file must have (row,col) in first line
+	
+	open(unit = unit_num, file = fname, status = 'old', action = 'read', iostat = ios)
+	if (ios .ne. 0) then
+		write(*,'(a,i3,a,a)') 'error opening unit', unit_num, ' -- ', fname
+	endif
+	
+	read(unit_num,*) row,col
+	allocate(mat(row,col))
+	do i = 1,row
+		read(unit_num,*) mat(i,:)
+	enddo
+endsubroutine matrixread
+
 	
 endmodule matrixtools

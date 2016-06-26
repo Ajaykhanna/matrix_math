@@ -4,7 +4,7 @@ IMPLICIT NONE
 
 real(8),dimension(:,:),allocatable :: mat
 real(8) :: det_mat
-integer :: ios, row, col, i
+integer :: ios, row, col
 character(80) :: fname
 
 101 format(a) ! plain text descriptor

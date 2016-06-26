@@ -11,7 +11,7 @@ character(80) :: fname
 102 format(e12.6) 
 
 ! take input of matrix file name
-write(*,101) 'enter filename of maticient matrix'
+write(*,101) 'enter filename of coefficient matrix'
 read(*,*) fname
 write(*,*)
 

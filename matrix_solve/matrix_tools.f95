@@ -154,17 +154,18 @@ subroutine matrixdet(row,col,mat,det_mat)
 
 endsubroutine matrixdet
 
-subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
+subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,ans,sol)
 	IMPLICIT NONE
-	integer,intent(in) :: row_coeff, col_coeff, row_ans, col_ans
+	integer,intent(in) :: row_coeff, col_coeff, row_ans
 	integer :: i, j
-	real(8),dimension(:,:),intent(in) :: coeff, ans
+	real(8),dimension(:,:),intent(in) :: coeff
+	real(8),dimension(:),intent(in) :: ans
 	real(8),dimension(:),intent(out),allocatable :: sol
 	real(8),dimension(:),allocatable :: y
 	real(8) :: lower_sum, upper_sum
 	real(8),dimension(:,:),allocatable :: lower, upper
 	
-	if ((col_coeff .ne. row_ans) .or. (col_ans .ne. 1)) stop('not sure that is a linear system...')
+	if (col_coeff .ne. row_ans) stop('not sure that is a linear system...')
 	allocate(sol(row_coeff),y(row_coeff))
 	call matrixdecompose(row_coeff,col_coeff,coeff,lower,upper)
 	
@@ -174,7 +175,7 @@ subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,col_ans,ans,sol)
 		do j = 1,(i - 1)
 			lower_sum = lower_sum + (lower(i,j) * y(j))
 		enddo
-		y(i) = (ans(i,1) - lower_sum) / lower(i,i)
+		y(i) = (ans(i) - lower_sum) / lower(i,i)
 	enddo
 	
 	! backward subtitution (upper matrix)
@@ -201,6 +202,7 @@ subroutine matrixread(unit_num,fname,row,col,mat)
 	open(unit = unit_num, file = fname, status = 'old', action = 'read', iostat = ios)
 	if (ios .ne. 0) then
 		write(*,'(a,i3,a,a)') 'error opening unit', unit_num, ' -- ', fname
+		stop('END PROGRAM')
 	endif
 	
 	read(unit_num,*) row,col
@@ -210,5 +212,51 @@ subroutine matrixread(unit_num,fname,row,col,mat)
 	enddo
 endsubroutine matrixread
 
+subroutine matrixinv(row,col,mat,invmat)
+	IMPLICIT NONE
+	integer,intent(in) :: row,col
+	integer :: i
+	real(8),dimension(:,:),intent(in) :: mat
+	real(8),dimension(:,:),intent(out),allocatable :: invmat
+	real(8),dimension(:),allocatable :: invcol, identitycol
+	real(8),dimension(:,:),allocatable :: identity
+	real(8) :: det_mat, tol
+	
+	! NEVER EVER USE AN INVERT TO PERFORM A SOLVE!
+	! THE INVERSION CALLS THE SOLVE SUBROUTINE N TIMES!
+	
+	101 format(a) ! plain text descriptor
+	
+	tol = 1.0d-2
+	
+	if (row .ne. col) stop ('inversion only for square matricies')
+	
+	! IEEE-FPE floating point error
+	call matrixdet(row,col,mat,det_mat)
+	allocate(invmat(row,col),identity(row,col))
+	allocate(invcol(row),identitycol(row))
+	invmat(:,:) = 0.0d0
+	identity(:,:) = 0.0d0
+	do i = 1,row
+		identity(i,i) = 1.0d0
+	enddo
+		
+	if ((det_mat .lt. tol) .and. (det_mat .gt. ((-1) * tol))) then
+		write(*,101) 'matrix is singular (det = 0)'
+		write(*,101) 'singular matricies are not invertable'
+		stop('END PROGRAM')
+	endif
+	
+	do i = 1,row
+		invcol(:) = 0.0d0
+		identitycol(:) = identity(:,i)
+		
+		call matrixsolve(row,col,mat,row,identitycol,invcol)
+		
+		invmat(:,i) = invcol(:)
+	enddo
+	
+endsubroutine matrixinv
+	
 	
 endmodule matrixtools

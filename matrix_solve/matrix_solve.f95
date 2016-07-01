@@ -2,11 +2,11 @@ program matrixsolveprogram
 use matrixtools
 IMPLICIT NONE
 
-real(8),dimension(:,:),allocatable :: coeff, sol_matrix, ansmat, lower, upper
+real(8),dimension(:,:),allocatable :: coeff, sol_matrix, ansmat
 real(8),dimension(:),  allocatable :: sol, ans
-real(8) :: difference, det_mat
+real(8) :: difference
 integer :: ios, row_coeff, col_coeff, row_ans, i,j
-integer :: row_ansmat, col_ansmat, william
+integer :: row_ansmat, col_ansmat
 character(80) :: fname_coeff, fname_ans
 
 101 format(a) ! plain text descriptor

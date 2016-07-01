@@ -29,14 +29,14 @@ subroutine vectorwrite(row,vect)
 	real(8),dimension(:),intent(in) :: vect
 	
 	103 format(a,e12.6,a)
-	
+
 	do i = 1,row
 		write(*,103) '[ ', vect(i), ' ]'
 	enddo
 	
 	write(*,*)
 endsubroutine vectorwrite
-	
+
 subroutine matrixmul(row1,col1,mat1,row2,col2,mat2,rowans,colans,ansmat)
 	IMPLICIT NONE
 	integer, intent(in)  :: row1, col1, row2, col2
@@ -250,7 +250,7 @@ subroutine matrixinv(row,col,mat,invmat)
 	do i = 1,row
 		invcol(:) = 0.0d0
 		identitycol(:) = identity(:,i)
-		
+	
 		call matrixsolve(row,col,mat,row,identitycol,invcol)
 		
 		invmat(:,i) = invcol(:)

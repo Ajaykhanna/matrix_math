@@ -1,0 +1,53 @@
+cells 714
+dx 0.09
+pins 6
+npin 17 ! 35
+
+pinmap
+4 4 5 4 4 5 4 4 5 4 4 5 4 4 5 4 4
+1 2 5 3 3 5 3 3 5 3 3 5 3 3 5 2 1
+6
+
+pin 1
+parts 3
+dimension
+0.09 1.17 1.26
+material
+mod m43 mod
+
+pin 2
+parts 3
+dimension
+0.09 1.17 1.26
+material
+mod m70 mod
+
+pin 3
+parts 3
+dimension
+0.09 1.17 1.26
+material
+mod m87 mod
+
+pin 4
+parts 3
+dimension
+0.09 1.17 1.26
+material
+mod uo2 mod
+
+pin 5
+parts 3
+dimension
+0.09 1.17 1.26
+material
+mod gtb mod
+
+pin 6
+parts 1
+dimension
+21.42
+material
+mod
+
+eof

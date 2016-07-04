@@ -9,10 +9,10 @@ character(3),dimension(:),allocatable :: names
 real(8),dimension(:,:),allocatable :: t, tr, d, a, c, f, nu, x, r
 real(8),dimension(:,:,:),allocatable :: s
 
-integer :: ios, cells, pins, npin, pin_num, pos, line_num, total_parts, i
+integer :: ios, cells, pins, npin, pin_num, pos, line_num, total_parts, i, beginning
 integer,dimension(:),allocatable :: pinmap, parts
 real(8),dimension(:),allocatable :: dimension, temp_dimension
-character(3),dimension(:),allocatable :: material_list
+character(3),dimension(:),allocatable :: material_list, temp_material_list
 real(8) :: dx
 character(100) :: line, label
 character(80)  :: fname_test
@@ -41,6 +41,7 @@ total_parts = 0
 allocate(dimension(1))
 allocate(temp_dimension(1))
 allocate(material_list(1))
+allocate(temp_material_list(1))
 do
 	line_num = line_num + 1
 	read(11,101) line
@@ -71,8 +72,14 @@ do
 		allocate(pinmap(npin))
 		pinmap(:) = 0
 	case ('pinmap')
+		beginning = 1
 		do while (pinmap(npin) .eq. 0)
-			read(11,*) pinmap
+			read(11,*) pinmap(beginning:)
+			do i = 1,npin
+				if (pinmap(i) .eq. 0) then
+					beginning = i
+				endif
+			enddo
 		enddo
 	case ('pin')
 		read(line,*) pin_num
@@ -86,15 +93,15 @@ do
 		deallocate(dimension)
 		allocate(dimension(total_parts))
 		dimension(1:(total_parts - parts(pin_num))) = temp_dimension
-		! write(*,*) total_parts - parts(pin_num) + 1 , total_parts
-		read(11,101) line
-		read(line,*) dimension(total_parts - parts(pin_num) + 1:total_parts)
-		! do i = 1,total_parts
-		! 	write(*,'(e12.6)') dimension(i)
-		! enddo
-		! write(*,*)
+		read(11,*) dimension(total_parts - parts(pin_num) + 1:total_parts)
 	case ('material')
-		read(11,*) material_list(1:parts(pin_num))
+		deallocate(temp_material_list)
+		allocate(temp_material_list(total_parts - parts(pin_num)))
+		temp_material_list = material_list
+		deallocate(material_list)
+		allocate(material_list(total_parts))
+		material_list(1:(total_parts - parts(pin_num))) = temp_material_list
+		read(11,*) material_list(total_parts - parts(pin_num) + 1:total_parts)
 	case ('eof')
 		write(*,101) 'END OF FILE'
 		write(*,101) 
@@ -103,7 +110,6 @@ do
 		write(*,'(a,i3,2a)') 'unknown input - line #',line_num,' - ',label
 	endselect
 enddo
-
 
 
 endprogram transportsolve

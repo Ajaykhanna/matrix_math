@@ -1,7 +1,7 @@
 cells 714
 dx 0.09
 pins 6
-npin 17 ! 35
+npin 35
 
 pinmap
 4 4 5 4 4 5 4 4 5 4 4 5 4 4 5 4 4

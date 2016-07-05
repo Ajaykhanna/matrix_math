@@ -52,13 +52,13 @@ chi_check = false;
 if abs(sum(xs.uo2.x) - 1) >= chi_tol
 	chi_check = true;
 end
-if abs(sum(xs.uo2.x) - 1) >= chi_tol
+if abs(sum(xs.m43.x) - 1) >= chi_tol
 	chi_check = true;
 end
-if abs(sum(xs.uo2.x) - 1) >= chi_tol
+if abs(sum(xs.m70.x) - 1) >= chi_tol
 	chi_check = true;
 end
-if abs(sum(xs.uo2.x) - 1) >= chi_tol
+if abs(sum(xs.m87.x) - 1) >= chi_tol
 	chi_check = true;
 end
 if chi_check

@@ -9,8 +9,10 @@ character(3),dimension(:),allocatable :: names
 real(8),dimension(:,:),allocatable :: t, tr, d, a, c, f, nu, x, r
 real(8),dimension(:,:,:),allocatable :: s
 
-integer :: ios, cells, pins, npin, pin_num, pos, line_num, total_parts, i, beginning
-integer,dimension(:),allocatable :: pinmap, parts
+integer :: i,j
+
+integer :: ios, cells, pins, npin, pin_num, pos, line_num, total_parts, beginning
+integer,dimension(:),allocatable :: pinmap, parts, parts_sum
 real(8),dimension(:),allocatable :: dimension, temp_dimension
 character(3),dimension(:),allocatable :: material_list, temp_material_list
 real(8) :: dx
@@ -67,6 +69,7 @@ do
 	case ('pins')
 		read(line,*) pins
 		allocate(parts(pins))
+		allocate(parts_sum(pins))
 	case ('npin')
 		read(line,*) npin
 		allocate(pinmap(npin))
@@ -109,6 +112,18 @@ do
 	case default
 		write(*,'(a,i3,2a)') 'unknown input - line #',line_num,' - ',label
 	endselect
+enddo
+
+parts_sum = 0
+do i = 1,pins
+	do j = 1,i
+		parts_sum(i) = parts_sum(i) + parts(j)
+	enddo
+enddo
+call vectorwrite(pins,real(parts_sum,8))
+
+do i = 1,npin
+	parts(pinmap(i))
 enddo
 
 

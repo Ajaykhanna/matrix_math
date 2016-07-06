@@ -108,7 +108,7 @@ while phibarerror > epsilon_phi || kerror > epsilon_k
 	s = s + 1;
 	% check for number of iterations
 	if s == 101;
-		error('failue to converge after 100 iteration')
+		error('failure to converge after 100 iterations')
 	end
 	% calculate Q values
 	for g = 1:N_g
@@ -181,7 +181,7 @@ while phibarerror > epsilon_phi || kerror > epsilon_k
 	phibar(:,:,s) = (phibar(:,:,s) * capital_H) / (sum_phibar);
 	phi(:,:,s)    = (phi(:,:,s)    * capital_H) / (sum_phi);
 	
-	% calculate iteration errror for the next iteration
+	% calculate iteration error for the next iteration
 	phibarerror = (norm(phibar(:,:,s) - phibar(:,:,(s - 1)),Inf)) / norm(phibar(:,:,s),Inf);
 	kerror = abs(1 - (k(s - 1) / k(s)));
 end

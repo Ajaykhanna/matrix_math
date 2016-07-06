@@ -41,7 +41,6 @@ real(8) :: numerator, denominator, sum_phibar, sum_phi
 
 101 format(a) ! plain text descriptor
 102 format(i1)
-103 format(e12.6,x)
 
 write(*,101) 'input filename'
 read(*,*) fname
@@ -58,9 +57,14 @@ if (ios .ne. 0) then
 	write(*,'(a,i3,a,a)') 'error opening unit', 11, ' -- ', fname_test
 	stop('END PROGRAM')
 endif
-open(unit = 12, file = 'transport.out', status = 'replace', action = 'write', iostat = ios)
+open(unit = 12, file = 'A_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
 if (ios .ne. 0) then
-	write(*,'(a,i3,a,a)') 'error opening unit', 12, ' -- ', 'transport.out'
+	write(*,'(a,i3,a,a)') 'error opening unit', 12, ' -- ', 'A_mat_g.csv'
+	stop('END PROGRAM')
+endif
+open(unit = 13, file = 'f_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
+if (ios .ne. 0) then
+	write(*,'(a,i3,a,a)') 'error opening unit', 13, ' -- ', 'A_mat_g.csv'
 	stop('END PROGRAM')
 endif
 
@@ -270,7 +274,11 @@ allocate(Q_up(cells,group,max_iteration))
 allocate(Q_down(cells,group,max_iteration))
 allocate(Q(cells,group,max_iteration))
 k(1) = 1.0d0
-phibar(:,:,z) = 1.0d0 * (1/(cells * group))
+do i = 1,cells
+	do j = 1,group
+		phibar(i,j,z) = 2.1d1 ! initial guess = 21
+	enddo
+enddo
 
 ! convergence tolerance
 epsilon_k   = 1.0d-5
@@ -305,6 +313,7 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 			Q_down(i,g,z) = downscatter_term
 
 			Q(i,g,z) = Q_down(i,g,z) + Q_up(i,g,(z - 1)) + Q_f(i,g,(z - 1))
+			! write(*,'(2(e12.6,x))') phibar(i,g,(z - 1)), phibar(i,g,z)
 			! turn Qs into f vector
 			f_mat((3 * i - 2),g) = Q(i,g,z) * dx
 		enddo
@@ -323,13 +332,15 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 
 
 		do i = 1, (3 * cells + 2)
-			write(12,101,advance= 'no') '[ '
 			do j = 1, (3 * cells + 2)
-				write(12,103,advance = 'no') A_mat_g(i,j)
+				write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
 			enddo
-			write(12,101) ']'
+			write(12,101) 
 		enddo
-		write(12,101) ! blank line
+
+		do i = 1, (3 * cells + 2)
+			write(13,'(e12.6)') f_mat_g(i)
+		enddo
 
 		! stop('here')
 

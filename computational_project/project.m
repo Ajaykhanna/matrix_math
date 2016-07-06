@@ -73,17 +73,17 @@ end
 A = zeros((3 * N + 2),(3 * N + 2),N_g);
 for g = 1:N_g
 	for i = 1:N
+		A((3 * i - 2),(3 * i),g)     = region(i).xs.r(g) * dx;
 		A((3 * i - 2),(3 * i - 1),g) = -1;
-		A((3 * i - 2),(3 * i),g) = region(i).xs.r(g) * dx;
 		A((3 * i - 2),(3 * i + 2),g) = 1;
 		
-		A((3 * i - 1),(3 * i),g) = (-1) * region(i).xs.D(g);
+		A((3 * i - 1),(3 * i),g)     = (-1) * region(i).xs.D(g);
 		A((3 * i - 1),(3 * i + 1),g) = region(i).xs.D(g);
 		A((3 * i - 1),(3 * i + 2),g) = 0.5 * dx;
 		
-		A((3 * i),(3 * i - 2),g) = (-1) * region(i).xs.D(g);
+		A((3 * i),(3 * i),g)     = region(i).xs.D(g);
 		A((3 * i),(3 * i - 1),g) = 0.5 * dx;
-		A((3 * i),(3 * i),g) = region(i).xs.D(g);
+		A((3 * i),(3 * i - 2),g) = (-1) * region(i).xs.D(g);
 	end
 end
 % reflective BC in A matrix
@@ -191,6 +191,7 @@ fund.phibar = phi(:,:,size(phibar,3));
 fund.phi = phi(:,:,size(phi,3));
 fund.J = J(:,:,size(J,3));
 fund.k = k(end);
+disp(fund.k)
 
 %
 % OUTPUT

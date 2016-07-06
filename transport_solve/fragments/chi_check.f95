@@ -10,7 +10,9 @@ do i = 1,material
 		chi_sum = chi_sum + x(i,j)
 	enddo
 	if (((chi_sum - 1.0d0) .gt. chi_tol) .or. ((chi_sum - 1.0d0) .lt. (-1) * chi_tol)) then
-		chi_check = .true.
+		if ((chi_sum .gt. chi_tol) .and. (chi_sum .lt. (-1)* chi_tol)) then
+			chi_check = .true.
+		endif
 	endif
 enddo
 if (chi_check) then

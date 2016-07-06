@@ -101,6 +101,7 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	enddo
 	
 	do i = 1,row
+		! write(*,'(i6)') i
 		do j = i,row
 			asum = 0.0d0
 			do w = 1,(i - 1)
@@ -119,17 +120,18 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	
 	! Multiply L * U to make sure it worked
 	! TO-DO: Remove this later
-	! call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
-	! do i = 1,col
-		! do j = 1,row
-			! if (ansmat(i,j) .ne. mat(i,j)) then
-				! write(*,'(2i3)') i,j
-				! stop('decomposition didnt work')
-			! endif
-		! enddo
-	! enddo
-	! write(*,101) 'decomposition successful'
-	! write(*,*)
+	call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
+	do i = 1,col
+		do j = 1,row
+			if (((ansmat(i,j) - mat(i,j)) .gt. 1.0d-5) .or. ((ansmat(i,j) - mat(i,j)) .lt. -1.0d-5)) then
+				write(*,'(2i3)') i,j
+				write(*,'(2e12.6)') ansmat(i,j), mat(i,j)
+				stop('decomposition didnt work')
+			endif
+		enddo
+	enddo
+	write(*,101) 'decomposition successful'
+	write(*,*)
 	
 endsubroutine matrixdecompose
 

@@ -38,6 +38,7 @@ real(8),dimension(:),allocatable :: k
 real(8) :: kerror, phibarerror, epsilon_k, epsilon_phi
 real(8) :: fission_term, upscatter_term, downscatter_term
 real(8) :: numerator, denominator, sum_phibar, sum_phi
+real(8),dimension(:,:),allocatable :: ansmat
 
 101 format(a) ! plain text descriptor
 102 format(i1)
@@ -64,7 +65,12 @@ if (ios .ne. 0) then
 endif
 open(unit = 13, file = 'f_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
 if (ios .ne. 0) then
-	write(*,'(a,i3,a,a)') 'error opening unit', 13, ' -- ', 'A_mat_g.csv'
+	write(*,'(a,i3,a,a)') 'error opening unit', 13, ' -- ', 'f_mat_g.csv'
+	stop('END PROGRAM')
+endif
+open(unit = 14, file = 'y_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
+if (ios .ne. 0) then
+	write(*,'(a,i3,a,a)') 'error opening unit', 14, ' -- ', 'y_mat_g.csv'
 	stop('END PROGRAM')
 endif
 
@@ -264,7 +270,7 @@ allocate(y_mat((3 * cells + 2),group))
 allocate(y_mat_g(3 * cells + 2))
 f_mat(:,:) = 0.0d0
 
-max_iteration = 100
+max_iteration = 10
 allocate(k(max_iteration))
 allocate(phibar(cells,group,max_iteration))
 allocate(phi(cells,group,max_iteration))
@@ -288,8 +294,12 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 	z = z + 1
 	write(*,'(i3)') z
 	! check for number of iterations
-	if (z .eq. 101) then
-		stop('failure to converge after 100 iterations')
+	if (z .eq. max_iteration + 1) then
+		do i = 1,(z - 1)
+			write(*,'(e12.6)') k(i)
+		enddo
+		write(*,'(a,i5,a)') 'failed to converge after', max_iteration, ' iterations'
+		stop
 	endif
 	! calculate Q values
 	do g = 1,group
@@ -331,18 +341,6 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 
 
 
-		do i = 1, (3 * cells + 2)
-			do j = 1, (3 * cells + 2)
-				write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
-			enddo
-			write(12,101) 
-		enddo
-
-		do i = 1, (3 * cells + 2)
-			write(13,'(e12.6)') f_mat_g(i)
-		enddo
-
-		! stop('here')
 
 
 
@@ -357,12 +355,18 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 
 
 
+		! A_mat_g(:,:) = 0.0d0
+		! f_mat_g(:) = 0.0d0
 
 
+		! A_mat_g(1,1) = 2;
+		! A_mat_g(1,2) = 1;
+		! A_mat_g(2,1) = 5;
+		! A_mat_g(2,2) = 0;
 
-
-
-
+		! f_mat_g(1) = 11;
+		! f_mat_g(2) = 13;
+		! y_mat_g(:) = 0.0d0
 
 
 
@@ -375,7 +379,47 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 
 		! the slowdown occurs in matrix decomposition
 		! call matrixwrite((3 * cells + 2),(3 * cells + 2),A_mat_g)
-		call matrixsolve((3 * cells + 2),(3 * cells + 2),A_mat_g,(3 * cells + 2),f_mat_g,y_mat_g)
+		! call matrixsolve((3 * cells + 2),(3 * cells + 2),A_mat_g,(3 * cells + 2),f_mat_g,y_mat_g)
+
+
+
+		do i = 1, (3 * cells + 2)
+			do j = 1, (3 * cells + 2)
+				write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
+			enddo
+			write(12,101) 
+		enddo
+
+		do i = 1, (3 * cells + 2)
+			write(13,'(e12.6)') f_mat_g(i)
+		enddo
+
+		do i = 1,(3 * cells + 2)
+			write(14,*) y_mat_g(i)
+		enddo
+		stop('here')
+
+
+
+
+		call gausssolve(2,A_mat_g,f_mat_g,y_mat_g)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		write(*,'(i3,a,i3)') z, ' , ', g
 		if (isnan(y_mat_g(1))) stop('y is nan')
 		y_mat(:,g) = y_mat_g
@@ -407,8 +451,8 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 			! write(*,'(3(e12.6,x))') phibar(i,g_prime,z), phibar(i,g_prime,(z - 1)), dx
 		enddo
 	enddo
-	write(*,*) numerator
-	write(*,*) denominator
+	! write(*,*) numerator
+	! write(*,*) denominator
 	k(z) = k(z - 1) * (numerator / denominator)
 
 	! make sure k is positive

@@ -24,7 +24,14 @@ if (row_ans .ne. row) then
 	stop('answer vector is not the correct dimension')
 endif
 
+call matrixwrite(row,col,mat)
+call vectorwrite(row,ans)
+
 call gausssolve(row,mat,ans,sol)
+write(*,101) 'solved'
+call matrixwrite(row,col,mat)
+call vectorwrite(row,ans)
+call vectorwrite(row,sol)
 
 
 endprogram gaussconverge

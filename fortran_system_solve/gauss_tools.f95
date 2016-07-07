@@ -85,13 +85,15 @@ endsubroutine vectorread
 
 subroutine gausssolve(n,mat,ans,sol)
 	IMPLICIT NONE
-	real(8),dimension(:,:),allocatable,intent(in)  :: mat
-	real(8),dimension(:)  ,allocatable,intent(in)  :: ans
+	real(8),dimension(:,:),allocatable,intent(inout)  :: mat
+	real(8),dimension(:)  ,allocatable,intent(inout)  :: ans
 	real(8),dimension(:)  ,allocatable,intent(out) :: sol
 	real(8),dimension(:)  ,allocatable             :: old_sol, difference
 	integer,intent(in) :: n
 	integer :: i, j, z, max_iteration
-	real(8) :: multiply_sum, solution_tol, convergence
+	real(8) :: multiply_sum, solution_tol, convergence, pivot_tol
+	real(8),dimension(:),allocatable :: store_row
+	real(8) :: store_ans
 
 	101 format(a)
 
@@ -102,6 +104,27 @@ subroutine gausssolve(n,mat,ans,sol)
 	sol = 1.0d0
 	convergence = 1.0d0
 	z = 0
+
+	pivot_tol = 1.0d-5
+	do i = 1,n
+		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
+			! write(*,101) 'pivot'
+			allocate(store_row(n))
+			store_row = mat(i,:)
+			store_ans = ans(i)
+			do j = 1,n
+				if ((mat(j,i) .gt. pivot_tol) .or. (mat(j,i) .lt. (-1) * pivot_tol)) then
+					if ((store_row(j) .gt. pivot_tol) .or. (store_row(j) .lt. (-1) * pivot_tol)) then
+						mat(i,:) = mat(j,:)
+						ans(i)   = ans(j)
+						mat(j,:) = store_row
+						ans(j)   = store_ans
+						exit
+					endif
+				endif
+			enddo
+		endif
+	enddo
 
 	do while (convergence .gt. solution_tol)
 		convergence = 0.0d0

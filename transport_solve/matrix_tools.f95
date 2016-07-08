@@ -124,7 +124,7 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	enddo
 	
 	do i = 1,row
-		! write(*,'(i6)') i
+		write(*,'(i6)') i
 		do j = i,row
 			asum = 0.0d0
 			do w = 1,(i - 1)

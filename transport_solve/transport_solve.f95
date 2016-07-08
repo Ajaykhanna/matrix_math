@@ -384,25 +384,25 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 		! call gausssolve((3 * cells + 2),A_mat_g,f_mat_g,y_mat_g)
 
 
-		do i = 1, (3 * cells + 2)
-			do j = 1, (3 * cells + 2)
-				write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
-			enddo
-			write(12,101) 
-		enddo
+		! do i = 1, (3 * cells + 2)
+		! 	do j = 1, (3 * cells + 2)
+		! 		write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
+		! 	enddo
+		! 	write(12,101) 
+		! enddo
 
-		do i = 1, (3 * cells + 2)
-			write(13,'(e12.6)') f_mat_g(i)
-		enddo
+		! do i = 1, (3 * cells + 2)
+		! 	write(13,'(e12.6)') f_mat_g(i)
+		! enddo
 
-		do i = 1,(3 * cells + 2)
-			write(14,*) y_mat_g(i)
-		enddo
-
-
+		! do i = 1,(3 * cells + 2)
+		! 	write(14,*) y_mat_g(i)
+		! enddo
 
 
-		stop('here')
+
+
+		! stop('here')
 
 
 

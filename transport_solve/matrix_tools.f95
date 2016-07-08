@@ -179,20 +179,139 @@ subroutine matrixdet(row,col,mat,det_mat)
 
 endsubroutine matrixdet
 
-subroutine matrixsolve(row_coeff,col_coeff,coeff,row_ans,ans,sol)
+subroutine matrixsolve(row_coeff,col_coeff,mat,row_ans,ans,sol)
 	IMPLICIT NONE
 	integer,intent(in) :: row_coeff, col_coeff, row_ans
 	integer :: i, j
-	real(8),dimension(:,:),intent(in) :: coeff
-	real(8),dimension(:),intent(in) :: ans
+	real(8),dimension(:,:),intent(inout) :: mat
+	real(8),dimension(:),intent(inout) :: ans
 	real(8),dimension(:),intent(out),allocatable :: sol
 	real(8),dimension(:),allocatable :: y
 	real(8) :: lower_sum, upper_sum
 	real(8),dimension(:,:),allocatable :: lower, upper
+
+	integer :: max_iteration, z, n, x, min_non_zero, max_non_zero
+	real(8) :: pivot_tol, store_ans
+	real(8),dimension(:),allocatable :: store_row
+	integer,dimension(:),allocatable :: non_zero
+	logical,dimension(:),allocatable :: done
+	logical :: diagonal_check
+
+
+
+
+	101 format(a)
 	
 	if (col_coeff .ne. row_ans) stop('not sure that is a linear system...')
 	allocate(sol(row_coeff),y(row_coeff))
-	call matrixdecompose(row_coeff,col_coeff,coeff,lower,upper)
+
+
+
+
+
+
+
+
+
+
+
+
+
+	max_iteration = 500
+	z = 0
+	n = row_coeff
+
+	allocate(non_zero(n))
+	pivot_tol = 1.0d-5
+	diagonal_check = .true.
+
+	do i = 1,n
+		non_zero(i) = 0
+		do j = 1,n
+			if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
+				non_zero(i) = non_zero(i) + 1
+			endif
+		enddo
+		! write(*,'(i3)') non_zero(i)
+	enddo
+
+	min_non_zero = n
+	max_non_zero = 0
+	do i = 1,n
+		if (non_zero(i) .lt. min_non_zero) then
+			min_non_zero = non_zero(i)
+		endif
+		if (non_zero(i) .gt. max_non_zero) then
+			max_non_zero = non_zero(i)
+		endif
+	enddo
+	! write(*,'(2i6)') min_non_zero,max_non_zero
+	! stop
+
+	z = 0
+	allocate(done(n))
+	do while (diagonal_check)
+		done(:) = .false.
+		diagonal_check = .false.
+		z = z + 1
+		! write(*,'(a,i4)') 'test ',z
+		do x = min_non_zero,max_non_zero
+			do i = 1,n
+				if ((non_zero(i) .eq. x) .and. ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol))) then
+					diagonal_check = .true.
+					do j = 1,n
+						if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
+							if (.not. done(j)) then
+								! swqp
+								if(.not. allocated(store_row)) allocate(store_row(n))
+								store_row = mat(i,:)
+								store_ans = ans(i)
+								mat(i,:)  = mat(j,:)
+								ans(i)    = ans(j)
+								mat(j,:)  = store_row
+								ans(j)    = store_ans
+								done(j)   = .true.
+							endif
+						endif
+					enddo
+				endif
+			enddo
+		enddo
+	enddo
+
+	do i = 1,n
+		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
+			stop('error')
+		endif
+	enddo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	call matrixdecompose(row_coeff,col_coeff,mat,lower,upper)
 	
 	! forward subtitution (lower matrix)
 	do i = 1,row_coeff
@@ -276,7 +395,8 @@ subroutine matrixinv(row,col,mat,invmat)
 		invcol(:) = 0.0d0
 		identitycol(:) = identity(:,i)
 		
-		call matrixsolve(row,col,mat,row,identitycol,invcol)
+		! call matrixsolve(row,col,mat,row,identitycol,invcol)
+		stop('commented out')
 		
 		invmat(:,i) = invcol(:)
 	enddo
@@ -304,7 +424,7 @@ subroutine gausssolve(n,mat,ans,sol)
 	solution_tol = 1.0d-10
 	allocate(sol(n),old_sol(n))
 	allocate(difference(n))
-	sol = 0.0d0
+	sol = ans
 	convergence = 1.0d0
 	z = 0
 
@@ -372,7 +492,9 @@ subroutine gausssolve(n,mat,ans,sol)
 		endif
 	enddo
 
-	do while (convergence .gt. solution_tol)
+	z = 0
+	! do while (convergence .gt. solution_tol)
+	do x = 1,1
 		convergence = 0.0d0
 		z = z + 1
 		if (z .eq. (max_iteration + 1)) then
@@ -386,14 +508,14 @@ subroutine gausssolve(n,mat,ans,sol)
 					multiply_sum = multiply_sum + mat(i,j) * sol(j)
 				endif
 			enddo
-			sol(i) = (ans(i) - multiply_sum) / mat(i,i)
-			if (isnan(sol(i))) then
-				write(*,'(i4)') i
-				stop('sol(i) is nan')
-			endif
-			difference(i) = (sol(i) - old_sol(i)) / sol(i)
-			difference(i) = difference(i) ** 2
-			convergence = convergence + difference(i)
+			sol(i) = (ans(i) - multiply_sum) !/ mat(i,i)
+			! if (isnan(sol(i))) then
+			! 	write(*,'(i4)') i
+			! 	stop('sol(i) is nan')
+			! endif
+			! difference(i) = (sol(i) - old_sol(i)) / sol(i)
+			! difference(i) = difference(i) ** 2
+			! convergence = convergence + difference(i)
 		enddo
 	enddo
 

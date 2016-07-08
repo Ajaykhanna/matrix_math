@@ -91,6 +91,9 @@ A((3 * N + 1),1,:) = -1;
 A((3 * N + 1),3,:) = 1;
 A((3 * N + 2),(3 * N + 1),:) = -1;
 A((3 * N + 2),(3 * N),:) = 1;
+for g = 1:N_g
+	inv_A(:,:,g) = inv(A(:,:,g));
+end
 
 
 % initial guesses
@@ -137,7 +140,8 @@ while phibarerror > epsilon_phi || kerror > epsilon_k
 		end
 		
 		% perform matrix math to sovle for y vector
-		y(:,g) = A(:,:,g) \ f(:,g);
+		% y(:,g) = A(:,:,g) \ f(:,g);
+		y(:,g) = inv_A(:,:,g) * f(:,g);
 		
 		% parse y vector for required functions
 		for i = 1:(N + 1)

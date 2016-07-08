@@ -379,30 +379,30 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 
 		! the slowdown occurs in matrix decomposition
 		! call matrixwrite((3 * cells + 2),(3 * cells + 2),A_mat_g)
-		! call matrixsolve((3 * cells + 2),(3 * cells + 2),A_mat_g,(3 * cells + 2),f_mat_g,y_mat_g)
+		call matrixsolve((3 * cells + 2),(3 * cells + 2),A_mat_g,(3 * cells + 2),f_mat_g,y_mat_g)
+
+		! call gausssolve((3 * cells + 2),A_mat_g,f_mat_g,y_mat_g)
+
+
+		do i = 1, (3 * cells + 2)
+			do j = 1, (3 * cells + 2)
+				write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
+			enddo
+			write(12,101) 
+		enddo
+
+		do i = 1, (3 * cells + 2)
+			write(13,'(e12.6)') f_mat_g(i)
+		enddo
+
+		do i = 1,(3 * cells + 2)
+			write(14,*) y_mat_g(i)
+		enddo
 
 
 
-		! do i = 1, (3 * cells + 2)
-		! 	do j = 1, (3 * cells + 2)
-		! 		write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
-		! 	enddo
-		! 	write(12,101) 
-		! enddo
 
-		! do i = 1, (3 * cells + 2)
-		! 	write(13,'(e12.6)') f_mat_g(i)
-		! enddo
-
-		! do i = 1,(3 * cells + 2)
-		! 	write(14,*) y_mat_g(i)
-		! enddo
-
-
-
-
-		call gausssolve((3 * cells + 2),A_mat_g,f_mat_g,y_mat_g)
-		! stop('here')
+		stop('here')
 
 
 

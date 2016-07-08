@@ -290,11 +290,13 @@ subroutine gausssolve(n,mat,ans,sol)
 	real(8),dimension(:)  ,allocatable,intent(out) :: sol
 	real(8),dimension(:)  ,allocatable             :: old_sol, difference
 	integer,intent(in) :: n
-	integer :: i, j, z, max_iteration
+	integer :: i, j, z, max_iteration, x, min_non_zero, max_non_zero
+	integer,dimension(:),allocatable :: non_zero
 	real(8) :: multiply_sum, solution_tol, convergence, pivot_tol
 	real(8),dimension(:),allocatable :: store_row
 	real(8) :: store_ans
 	logical :: diagonal_check
+	logical,dimension(:),allocatable :: done
 
 	101 format(a)
 
@@ -306,36 +308,76 @@ subroutine gausssolve(n,mat,ans,sol)
 	convergence = 1.0d0
 	z = 0
 
+	allocate(non_zero(n))
 	pivot_tol = 1.0d-5
 	diagonal_check = .true.
-	i = 0
-	do while (diagonal_check)
-		diagonal_check = .false.
-		do i = 1,n
-			if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
-				write(*,'(a,i4)') 'pivot', i
-				diagonal_check = .true.
-				if (.not. allocated(store_row)) allocate(store_row(n))
-				store_row = mat(i,:)
-				store_ans = ans(i)
-				do j = 1,n
-					if ((mat(j,i) .gt. pivot_tol) .or. (mat(j,i) .lt. (-1) * pivot_tol)) then
-						if ((store_row(j) .gt. pivot_tol) .or. (store_row(j) .lt. (-1) * pivot_tol)) then
-							mat(i,:) = mat(j,:)
-							ans(i)   = ans(j)
-							mat(j,:) = store_row
-							ans(j)   = store_ans
-							exit
-						endif
-					endif
-				enddo
+
+	do i = 1,n
+		non_zero(i) = 0
+		do j = 1,n
+			if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
+				non_zero(i) = non_zero(i) + 1
 			endif
 		enddo
+		! write(*,'(i3)') non_zero(i)
+	enddo
+
+	min_non_zero = n
+	max_non_zero = 0
+	do i = 1,n
+		if (non_zero(i) .lt. min_non_zero) then
+			min_non_zero = non_zero(i)
+		endif
+		if (non_zero(i) .gt. max_non_zero) then
+			max_non_zero = non_zero(i)
+		endif
+	enddo
+	! write(*,'(2i6)') min_non_zero,max_non_zero
+	! stop
+
+	z = 0
+	allocate(done(n))
+	do while (diagonal_check)
+		done(:) = .false.
+		diagonal_check = .false.
+		z = z + 1
+		! write(*,'(a,i4)') 'test ',z
+		do x = min_non_zero,max_non_zero
+			do i = 1,n
+				if ((non_zero(i) .eq. x) .and. ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol))) then
+					diagonal_check = .true.
+					do j = 1,n
+						if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
+							if (.not. done(j)) then
+								! swqp
+								if(.not. allocated(store_row)) allocate(store_row(n))
+								store_row = mat(i,:)
+								store_ans = ans(i)
+								mat(i,:)  = mat(j,:)
+								ans(i)    = ans(j)
+								mat(j,:)  = store_row
+								ans(j)    = store_ans
+								done(j)   = .true.
+							endif
+						endif
+					enddo
+				endif
+			enddo
+		enddo
+	enddo
+
+	do i = 1,n
+		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
+			stop('error')
+		endif
 	enddo
 
 	do while (convergence .gt. solution_tol)
 		convergence = 0.0d0
 		z = z + 1
+		if (z .eq. (max_iteration + 1)) then
+			write(*,'(a,i4,a)') 'failed to converge in ', max_iteration, ' iterations'
+		endif
 		do i = 1,n
 			old_sol(i) = sol(i)
 			multiply_sum = 0.0d0
@@ -353,14 +395,9 @@ subroutine gausssolve(n,mat,ans,sol)
 			difference(i) = difference(i) ** 2
 			convergence = convergence + difference(i)
 		enddo
-		if (z .eq. 100) then
-			convergence = 0.0d0
-		else
-			convergence = 69.0d0
-		endif
 	enddo
 
-	write(*,'(i4)') z
+	write(*,'(a,i4)') 'iterations ', z
 
 endsubroutine gausssolve
 	

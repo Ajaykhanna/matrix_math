@@ -20,17 +20,20 @@ while (diagonal_check)
 				it = it + 1;
 				j = j - 1;
 				if (j < 1)
-					j = ;
+					j = n;
 				end
 				if ((mat(j,i) > pivot_tol) || (mat(j,i) < (-1)*pivot_tol))
-					% if ((mat(i,j) > pivot_tol) || (mat(i,j) < (-1)*pivot_tol))
+					if ((mat(i,j) > pivot_tol) || (mat(i,j) < (-1)*pivot_tol))
 						mat(i,:) = mat(j,:);
 						myans(i) = myans(j);
 						mat(j,:) = store_row;
 						myans(j) = store_myans;
 						fprintf('swap  %i \n',j);
 						break
-					% end
+					end
+				end
+				if (it == n)
+					error('caught');
 				end
 			end
 		end

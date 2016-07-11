@@ -270,7 +270,7 @@ allocate(y_mat((3 * cells + 2),group))
 allocate(y_mat_g(3 * cells + 2))
 f_mat(:,:) = 0.0d0
 
-max_iteration = 10
+max_iteration = 100
 allocate(k(max_iteration))
 allocate(phibar(cells,group,max_iteration))
 allocate(phi(cells,group,max_iteration))
@@ -332,101 +332,11 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 		f_mat_g = f_mat(:,g)
 		y_mat_g = y_mat(:,g)
 		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		! A_mat_g(:,:) = 0.0d0
-		! f_mat_g(:) = 0.0d0
-
-
-		! A_mat_g(1,1) = 2;
-		! A_mat_g(1,2) = 1;
-		! A_mat_g(2,1) = 5;
-		! A_mat_g(2,2) = 0;
-
-		! f_mat_g(1) = 11;
-		! f_mat_g(2) = 13;
-		! y_mat_g(:) = 0.0d0
-
-
-
-
-
-
-
-
-
-
-		! the slowdown occurs in matrix decomposition
-		! call matrixwrite((3 * cells + 2),(3 * cells + 2),A_mat_g)
 		call matrixsolve((3 * cells + 2),(3 * cells + 2),A_mat_g,(3 * cells + 2),f_mat_g,y_mat_g)
-
-		! call gausssolve((3 * cells + 2),A_mat_g,f_mat_g,y_mat_g)
-
-
-		! do i = 1, (3 * cells + 2)
-		! 	do j = 1, (3 * cells + 2)
-		! 		write(12,'(e12.6,a)',advance = 'no') A_mat_g(i,j),','
-		! 	enddo
-		! 	write(12,101) 
-		! enddo
-
-		! do i = 1, (3 * cells + 2)
-		! 	write(13,'(e12.6)') f_mat_g(i)
-		! enddo
-
-		! do i = 1,(3 * cells + 2)
-		! 	write(14,*) y_mat_g(i)
-		! enddo
-
-
-
-
-		! stop('here')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 		write(*,'(i3,a,i3)') z, ' , ', g
 		if (isnan(y_mat_g(1))) stop('y is nan')
 		y_mat(:,g) = y_mat_g
-
-		do i = 1,(3 * cells + 2)
-			! write(*,'(e12.6)') y_mat(i,g)
-		enddo
 
 		! parse y vector for required functions
 		do i = 1,(cells + 1)
@@ -479,7 +389,7 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 enddo
 
 write(*,101) 'I FOUND K!!!'
-write(*,101) '(maybe)'
+! write(*,101) '(maybe)'
 write(*,'(e12.6)') k(z)
 
 

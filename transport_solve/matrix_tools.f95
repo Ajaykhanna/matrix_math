@@ -100,6 +100,87 @@ subroutine matrixmul(row1,col1,mat1,row2,col2,mat2,rowans,colans,ansmat)
 	enddo
 endsubroutine matrixmul
 
+subroutine nonzerodiag(row,col,mat,ans)
+	IMPLICIT NONE
+	integer,intent(in) :: row, col
+	real(8),dimension(:,:),intent(inout) :: mat
+	real(8),dimension(:)  ,intent(inout) :: ans
+	integer :: i, j, z, n, x, min_non_zero, max_non_zero
+	real(8) :: pivot_tol, store_ans
+	real(8),dimension(:),allocatable :: store_row
+	logical :: diagonal_check
+	logical,dimension(:),allocatable :: done
+	integer,dimension(:),allocatable :: non_zero
+
+	if (row .ne. col) then
+		stop('nonzerodiag only for square matricies')
+	endif
+
+	z = 0
+	n = row
+
+	allocate(non_zero(n))
+	pivot_tol = 1.0d-5
+	diagonal_check = .true.
+
+	do i = 1,n
+		non_zero(i) = 0
+		do j = 1,n
+			if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
+				non_zero(i) = non_zero(i) + 1
+			endif
+		enddo
+	enddo
+
+	min_non_zero = n
+	max_non_zero = 0
+	do i = 1,n
+		if (non_zero(i) .lt. min_non_zero) then
+			min_non_zero = non_zero(i)
+		endif
+		if (non_zero(i) .gt. max_non_zero) then
+			max_non_zero = non_zero(i)
+		endif
+	enddo
+
+	z = 0
+	allocate(done(n))
+	do while (diagonal_check)
+		done(:) = .false.
+		diagonal_check = .false.
+		z = z + 1
+		do x = min_non_zero,max_non_zero
+			do i = 1,n
+				if ((non_zero(i) .eq. x) .and. ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol))) then
+					diagonal_check = .true.
+					do j = 1,n
+						if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
+							if (.not. done(j)) then
+								! swap
+								if(.not. allocated(store_row)) allocate(store_row(n))
+								store_row = mat(i,:)
+								store_ans = ans(i)
+								mat(i,:)  = mat(j,:)
+								ans(i)    = ans(j)
+								mat(j,:)  = store_row
+								ans(j)    = store_ans
+								done(j)   = .true.
+							endif
+						endif
+					enddo
+				endif
+			enddo
+		enddo
+	enddo
+
+	do i = 1,n
+		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
+			stop('error')
+		endif
+	enddo
+
+endsubroutine nonzerodiag
+
 subroutine matrixdecompose(row,col,mat,lower,upper)
 	IMPLICIT NONE
 	integer,intent(in) :: row, col
@@ -124,7 +205,7 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	enddo
 	
 	do i = 1,row
-		write(*,'(i6)') i
+		! write(*,'(i6)') i
 		do j = i,row
 			asum = 0.0d0
 			do w = 1,(i - 1)
@@ -143,18 +224,18 @@ subroutine matrixdecompose(row,col,mat,lower,upper)
 	
 	! Multiply L * U to make sure it worked
 	! TO-DO: Remove this later
-	call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
-	do i = 1,col
-		do j = 1,row
-			if (((ansmat(i,j) - mat(i,j)) .gt. 1.0d-5) .or. ((ansmat(i,j) - mat(i,j)) .lt. -1.0d-5)) then
-				write(*,'(2i3)') i,j
-				write(*,'(2e12.6)') ansmat(i,j), mat(i,j)
-				stop('decomposition didnt work')
-			endif
-		enddo
-	enddo
-	write(*,101) 'decomposition successful'
-	write(*,*)
+	! call matrixmul(row,col,lower,row,col,upper,ansrow,anscol,ansmat)
+	! do i = 1,col
+	! 	do j = 1,row
+	! 		if (((ansmat(i,j) - mat(i,j)) .gt. 1.0d-5) .or. ((ansmat(i,j) - mat(i,j)) .lt. -1.0d-5)) then
+	! 			write(*,'(2i3)') i,j
+	! 			write(*,'(2e12.6)') ansmat(i,j), mat(i,j)
+	! 			stop('decomposition didnt work')
+	! 		endif
+	! 	enddo
+	! enddo
+	! write(*,101) 'decomposition successful'
+	! write(*,*)
 	
 endsubroutine matrixdecompose
 
@@ -197,119 +278,12 @@ subroutine matrixsolve(row_coeff,col_coeff,mat,row_ans,ans,sol)
 	logical,dimension(:),allocatable :: done
 	logical :: diagonal_check
 
-
-
-
 	101 format(a)
 	
 	if (col_coeff .ne. row_ans) stop('not sure that is a linear system...')
 	allocate(sol(row_coeff),y(row_coeff))
 
-
-
-
-
-
-
-
-
-
-
-
-
-	max_iteration = 500
-	z = 0
-	n = row_coeff
-
-	allocate(non_zero(n))
-	pivot_tol = 1.0d-5
-	diagonal_check = .true.
-
-	do i = 1,n
-		non_zero(i) = 0
-		do j = 1,n
-			if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
-				non_zero(i) = non_zero(i) + 1
-			endif
-		enddo
-		! write(*,'(i3)') non_zero(i)
-	enddo
-
-	min_non_zero = n
-	max_non_zero = 0
-	do i = 1,n
-		if (non_zero(i) .lt. min_non_zero) then
-			min_non_zero = non_zero(i)
-		endif
-		if (non_zero(i) .gt. max_non_zero) then
-			max_non_zero = non_zero(i)
-		endif
-	enddo
-	! write(*,'(2i6)') min_non_zero,max_non_zero
-	! stop
-
-	z = 0
-	allocate(done(n))
-	do while (diagonal_check)
-		done(:) = .false.
-		diagonal_check = .false.
-		z = z + 1
-		! write(*,'(a,i4)') 'test ',z
-		do x = min_non_zero,max_non_zero
-			do i = 1,n
-				if ((non_zero(i) .eq. x) .and. ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol))) then
-					diagonal_check = .true.
-					do j = 1,n
-						if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
-							if (.not. done(j)) then
-								! swqp
-								if(.not. allocated(store_row)) allocate(store_row(n))
-								store_row = mat(i,:)
-								store_ans = ans(i)
-								mat(i,:)  = mat(j,:)
-								ans(i)    = ans(j)
-								mat(j,:)  = store_row
-								ans(j)    = store_ans
-								done(j)   = .true.
-							endif
-						endif
-					enddo
-				endif
-			enddo
-		enddo
-	enddo
-
-	do i = 1,n
-		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
-			stop('error')
-		endif
-	enddo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	call nonzerodiag(row_coeff,col_coeff,mat,ans)
 
 	call matrixdecompose(row_coeff,col_coeff,mat,lower,upper)
 	
@@ -410,13 +384,8 @@ subroutine gausssolve(n,mat,ans,sol)
 	real(8),dimension(:)  ,allocatable,intent(out) :: sol
 	real(8),dimension(:)  ,allocatable             :: old_sol, difference
 	integer,intent(in) :: n
-	integer :: i, j, z, max_iteration, x, min_non_zero, max_non_zero
-	integer,dimension(:),allocatable :: non_zero
-	real(8) :: multiply_sum, solution_tol, convergence, pivot_tol
-	real(8),dimension(:),allocatable :: store_row
-	real(8) :: store_ans
-	logical :: diagonal_check
-	logical,dimension(:),allocatable :: done
+	integer :: i, j, z, max_iteration, x
+	real(8) :: multiply_sum, solution_tol, convergence
 
 	101 format(a)
 
@@ -428,73 +397,11 @@ subroutine gausssolve(n,mat,ans,sol)
 	convergence = 1.0d0
 	z = 0
 
-	allocate(non_zero(n))
-	pivot_tol = 1.0d-5
-	diagonal_check = .true.
-
-	do i = 1,n
-		non_zero(i) = 0
-		do j = 1,n
-			if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
-				non_zero(i) = non_zero(i) + 1
-			endif
-		enddo
-		! write(*,'(i3)') non_zero(i)
-	enddo
-
-	min_non_zero = n
-	max_non_zero = 0
-	do i = 1,n
-		if (non_zero(i) .lt. min_non_zero) then
-			min_non_zero = non_zero(i)
-		endif
-		if (non_zero(i) .gt. max_non_zero) then
-			max_non_zero = non_zero(i)
-		endif
-	enddo
-	! write(*,'(2i6)') min_non_zero,max_non_zero
-	! stop
+	call nonzerodiag(n,n,mat,ans)
 
 	z = 0
-	allocate(done(n))
-	do while (diagonal_check)
-		done(:) = .false.
-		diagonal_check = .false.
-		z = z + 1
-		! write(*,'(a,i4)') 'test ',z
-		do x = min_non_zero,max_non_zero
-			do i = 1,n
-				if ((non_zero(i) .eq. x) .and. ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol))) then
-					diagonal_check = .true.
-					do j = 1,n
-						if ((mat(i,j) .gt. pivot_tol) .or. (mat(i,j) .lt. (-1)*pivot_tol)) then
-							if (.not. done(j)) then
-								! swqp
-								if(.not. allocated(store_row)) allocate(store_row(n))
-								store_row = mat(i,:)
-								store_ans = ans(i)
-								mat(i,:)  = mat(j,:)
-								ans(i)    = ans(j)
-								mat(j,:)  = store_row
-								ans(j)    = store_ans
-								done(j)   = .true.
-							endif
-						endif
-					enddo
-				endif
-			enddo
-		enddo
-	enddo
-
-	do i = 1,n
-		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
-			stop('error')
-		endif
-	enddo
-
-	z = 0
-	! do while (convergence .gt. solution_tol)
-	do x = 1,1
+	do while (convergence .gt. solution_tol)
+	! do x = 1,1
 		convergence = 0.0d0
 		z = z + 1
 		if (z .eq. (max_iteration + 1)) then
@@ -508,14 +415,14 @@ subroutine gausssolve(n,mat,ans,sol)
 					multiply_sum = multiply_sum + mat(i,j) * sol(j)
 				endif
 			enddo
-			sol(i) = (ans(i) - multiply_sum) !/ mat(i,i)
-			! if (isnan(sol(i))) then
-			! 	write(*,'(i4)') i
-			! 	stop('sol(i) is nan')
-			! endif
-			! difference(i) = (sol(i) - old_sol(i)) / sol(i)
-			! difference(i) = difference(i) ** 2
-			! convergence = convergence + difference(i)
+			sol(i) = (ans(i) - multiply_sum) / mat(i,i)
+			if (isnan(sol(i))) then
+				write(*,'(i4)') i
+				stop('sol(i) is nan')
+			endif
+			difference(i) = (sol(i) - old_sol(i)) / sol(i)
+			difference(i) = difference(i) ** 2
+			convergence = convergence + difference(i)
 		enddo
 	enddo
 

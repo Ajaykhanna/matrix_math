@@ -173,11 +173,12 @@ subroutine nonzerodiag(row,col,mat,ans)
 		enddo
 	enddo
 
-	do i = 1,n
-		if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
-			stop('error')
-		endif
-	enddo
+	! Check if it worked (not really necessary)
+	! do i = 1,n
+	! 	if ((mat(i,i) .lt. pivot_tol) .and. (mat(i,i) .gt. (-1)*pivot_tol)) then
+	! 		stop('error')
+	! 	endif
+	! enddo
 
 endsubroutine nonzerodiag
 

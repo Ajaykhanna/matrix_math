@@ -3,21 +3,20 @@ use transporttools
 use matrixtools
 IMPLICIT NONE
 
-character(80)  :: fname
+character(80)  :: fname, fname_input
 integer :: group, material
 character(3),dimension(:),allocatable :: names
 real(8),dimension(:,:),allocatable :: t_in, tr_in, d_in, a_in, c_in, f_in, nu_in, x_in, r_in
 real(8),dimension(:,:,:),allocatable :: s_in
 
-integer :: i,j
+integer :: i,j,ios
 
-integer :: ios, cells, pins, npin, pin_num, pos, line_num, total_parts, beginning
+integer :: cells, pins, npin
 integer,dimension(:),allocatable :: pinmap, parts, parts_sum
-real(8),dimension(:),allocatable :: dimensions, temp_dimensions
-character(3),dimension(:),allocatable :: material_list, temp_material_list
+real(8),dimension(:),allocatable :: dimensions
+character(3),dimension(:),allocatable :: material_list
 real(8) :: dx
-character(100) :: line, label
-character(80)  :: fname_test
+
 
 integer :: regions, region_counter
 integer,dimension(:),allocatable :: material_index_cells
@@ -40,129 +39,43 @@ real(8) :: fission_term, upscatter_term, downscatter_term
 real(8) :: numerator, denominator, sum_phibar, sum_phi
 real(8),dimension(:,:),allocatable :: ansmat
 
+character(8)  :: date
+character(10) :: time
+character(20) :: date_out, time_out
+real :: start_cpu, finish_cpu
+
+
 101 format(a) ! plain text descriptor
 102 format(i1)
+
+call date_and_time(date,time)
+call cpu_time(start_cpu)
+date_out = date(5:6) // '/' // date(7:8) // '/' // date(1:4)
+time_out = time(1:2) // ':' // time(3:4) // ':' // time(5:10)
+
+write(*,101) 'execution time'
+write(*,'(a,x,a)') date_out, time_out
 
 write(*,101) 'input filename'
 read(*,*) fname
 call xsread(fname,group,material,names,t_in,tr_in,d_in,a_in,c_in,f_in,nu_in,x_in,s_in,r_in)
 
-! call matrixwrite(material,group,r)
-
-
 write(*,101) 'enter test input filename'
-read(*,*) fname_test
+read(*,*) fname_input
+call transportinput (fname_input,cells,dx,pins,npin,pinmap,dimensions,material_list,parts)
 
-open(unit = 11, file = fname_test, status = 'old', action = 'read', iostat = ios)
-if (ios .ne. 0) then
-	write(*,'(a,i3,a,a)') 'error opening unit', 11, ' -- ', fname_test
-	stop('END PROGRAM')
-endif
-open(unit = 12, file = 'A_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
-if (ios .ne. 0) then
-	write(*,'(a,i3,a,a)') 'error opening unit', 12, ' -- ', 'A_mat_g.csv'
-	stop('END PROGRAM')
-endif
-open(unit = 13, file = 'f_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
-if (ios .ne. 0) then
-	write(*,'(a,i3,a,a)') 'error opening unit', 13, ' -- ', 'f_mat_g.csv'
-	stop('END PROGRAM')
-endif
-open(unit = 14, file = 'y_mat_g.csv', status = 'replace', action = 'write', iostat = ios)
-if (ios .ne. 0) then
-	write(*,'(a,i3,a,a)') 'error opening unit', 14, ' -- ', 'y_mat_g.csv'
-	stop('END PROGRAM')
-endif
-
-line_num = 0
-total_parts = 0
-allocate(dimensions(1))
-allocate(temp_dimensions(1))
-allocate(material_list(1))
-allocate(temp_material_list(1))
-do
-	line_num = line_num + 1
-	read(11,101) line
-	pos = scan(line, ' ')
-	label = line(1:pos)
-	line = line(pos + 1:)
-	pos = scan(line,'!')
-	if (pos .ne. 0) then
-		line = line(1:pos)
-	endif
-
-	select case (label)
-	case ('!')
-		! comment
-		cycle
-	case ('')
-		! blank line
-		cycle
-	case ('cells')
-		read(line,*) cells
-	case ('dx')
-		read(line,*) dx
-	case ('pins')
-		read(line,*) pins
-		allocate(parts(pins))
-		allocate(parts_sum(pins))
-	case ('npin')
-		read(line,*) npin
-		allocate(pinmap(npin))
-		pinmap(:) = 0
-	case ('pinmap')
-		beginning = 1
-		do while (pinmap(npin) .eq. 0)
-			read(11,*) pinmap(beginning:)
-			do i = 1,npin
-				if (pinmap(i) .eq. 0) then
-					beginning = i
-				endif
-			enddo
-		enddo
-	case ('pin')
-		read(line,*) pin_num
-	case ('parts')
-		read(line,*) parts(pin_num)
-		total_parts = total_parts + parts(pin_num)
-	case ('dimension')
-		deallocate(temp_dimensions)
-		allocate(temp_dimensions(total_parts - parts(pin_num)))
-		temp_dimensions = dimensions
-		deallocate(dimensions)
-		allocate(dimensions(total_parts))
-		dimensions(1:(total_parts - parts(pin_num))) = temp_dimensions
-		read(11,*) dimensions(total_parts - parts(pin_num) + 1:total_parts)
-	case ('material')
-		deallocate(temp_material_list)
-		allocate(temp_material_list(total_parts - parts(pin_num)))
-		temp_material_list = material_list
-		deallocate(material_list)
-		allocate(material_list(total_parts))
-		material_list(1:(total_parts - parts(pin_num))) = temp_material_list
-		read(11,*) material_list(total_parts - parts(pin_num) + 1:total_parts)
-	case ('eof')
-		write(*,101) 'END OF FILE'
-		write(*,101) 
-		exit
-	case default
-		write(*,'(a,i3,2a)') 'unknown input - line #',line_num,' - ',label
-	endselect
-enddo
-
+allocate(parts_sum(pins))
 parts_sum = 0
 do i = 1,pins
 	do j = 1,i
 		parts_sum(i) = parts_sum(i) + parts(j)
 	enddo
 enddo
-! call vectorwrite(pins,real(parts_sum,8))
 
 regions = 0
 do i = 1,npin
 	regions = regions + parts(pinmap(i))
 enddo
-! write(*,'(i4)') regions
 allocate(x_coords(regions))
 allocate(material_region(regions))
 
@@ -173,8 +86,6 @@ do i = 1,npin
 	material_region(region_counter:(region_counter + parts(pinmap(i)) - 1)) = &
 		& material_list((parts_sum(pinmap(i)) - parts(pinmap(i)) + 1):parts_sum(pinmap(i)))
 	region_counter = region_counter + parts(pinmap(i))
-	! write(*,'(2i3)') (parts_sum(pinmap(i)) - parts(pinmap(i)) + 1),parts_sum(pinmap(i))
-	! write(*,101) material_list(parts_sum(pinmap(i)) - parts(pinmap(i)) + 1:parts_sum(pinmap(i)))
 enddo
 capital_H = x_coords(regions)
 
@@ -202,7 +113,6 @@ do i = 1,cells
 	do j = 1,material
 		if (material_cells(i) .eq. names(j)) then
 			material_index_cells(i) = j
-			! write(*,'(i3)') material_index_cells(i)
 			exit
 		endif
 	enddo
@@ -230,10 +140,12 @@ do i = 1,cells
 	r(i,:) = r_in(material_index_cells(i),:)
 	s(i,:,:) = s_in(material_index_cells(i),:,:)
 enddo
+
 !-----------------------------------------------------------------------------!
 !-----------------------------------------------------------------------------!
 !-----------------------------------------------------------------------------!
 !-----------------------------------------------------------------------------!
+
 ! build A_mat matrix of geometry/material properties
 allocate(A_mat((3 * cells + 2),(3 * cells + 2),group))
 allocate(A_mat_g((3 * cells + 2),(3 * cells + 2)))
@@ -280,16 +192,18 @@ allocate(Q_up(cells,group,max_iteration))
 allocate(Q_down(cells,group,max_iteration))
 allocate(Q(cells,group,max_iteration))
 k(1) = 1.0d0
-do i = 1,cells
-	do j = 1,group
-		phibar(i,j,z) = 2.1d1 ! initial guess = 21
-	enddo
-enddo
+! do i = 1,cells
+! 	do j = 1,group
+! 		phibar(i,j,z) = 2.1d1 ! initial guess = 21
+! 	enddo
+! enddo
 
 ! convergence tolerance
 epsilon_k   = 1.0d-5
 epsilon_phi = 1.0d-5
 
+stop('solver loop')
+! solver loop
 do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 	z = z + 1
 	write(*,'(i3)') z
@@ -391,6 +305,10 @@ enddo
 write(*,101) 'I FOUND K!!!'
 ! write(*,101) '(maybe)'
 write(*,'(e12.6)') k(z)
+
+call cpu_time(finish_cpu)
+write(*,101)
+write(*,'(e12.6)') finish_cpu
 
 
 endprogram transportsolve

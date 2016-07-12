@@ -93,11 +93,10 @@ IMPLICIT NONE
 				read(11,*) s(mat_num,i,:)
 			enddo
 		case ('eof')
-			write(*,101) 'END OF FILE'
-			write(*,101)
+			write(*,101) 'END OF FILE - xsread'
 			exit
 		case default
-			write(*,'(a,i3,3a)') 'unknown input - line #',line_num,' - ',label,line
+			write(*,'(a,i3,3a)') 'unknown input xsread - line #',line_num,' - ',label,line
 		endselect
 	enddo
 
@@ -114,17 +113,21 @@ IMPLICIT NONE
 
 endsubroutine xsread
 
-subroutine transportinput(fname,cells,dx,pins,npin,pinmap,dimensions,material_list,parts)
+subroutine transportinput(fname,dx,cells,names,material_index_cells,material)
 	IMPLICIT NONE
 	integer :: ios, line_num, total_parts, pin_num, pos, beginning
 	integer :: i
-	integer,intent(out) :: cells, pins, npin
-	integer,dimension(:),allocatable,intent(out) :: pinmap, parts
+	integer,intent(out) :: cells
+	integer :: pins, npin
+	integer,dimension(:),allocatable :: pinmap, parts
 	! integer,dimension(:),allocatable :: parts!, parts_sum
-	real(8),dimension(:),allocatable,intent(out) :: dimensions
+	real(8),dimension(:),allocatable :: dimensions
 	real(8),dimension(:),allocatable :: temp_dimensions
 	character(3),dimension(:),allocatable :: temp_material_list
-	character(3),dimension(:),allocatable,intent(out) :: material_list
+	character(3),dimension(:),allocatable :: material_list
+	character(3),dimension(:),allocatable,intent(in) :: names
+	integer,intent(in) :: material
+	integer,dimension(:),allocatable,intent(out) :: material_index_cells
 	real(8) :: dx
 	character(100) :: line, label
 	character(80)  :: fname
@@ -205,34 +208,136 @@ subroutine transportinput(fname,cells,dx,pins,npin,pinmap,dimensions,material_li
 			material_list(1:(total_parts - parts(pin_num))) = temp_material_list
 			read(11,*) material_list(total_parts - parts(pin_num) + 1:total_parts)
 		case ('eof')
-			write(*,101) 'END OF FILE'
-			write(*,101) 
+			write(*,101) 'END OF FILE - transportinput'
 			exit
 		case default
-			write(*,'(a,i3,2a)') 'unknown input - line #',line_num,' - ',label
+			write(*,'(a,i3,2a)') 'unknown input transportinput - line #',line_num,' - ',label
 		endselect
 	enddo
 
 	close(unit = 11)
 
+	call meshbuild(cells,dx,pins,npin,pinmap,dimensions,material_list,parts,names,material,material_index_cells)
+
 endsubroutine transportinput
 
-subroutine allocatexs(t,tr,d,a,c,f,nu,x,r,s,material,group)
+subroutine meshbuild(cells,dx,pins,npin,pinmap,dimensions,material_list,parts,names,material,material_index_cells)
+	IMPLICIT NONE
+	
+	integer,intent(in) :: cells, pins, npin, material
+	integer,dimension(:),allocatable,intent(in) :: pinmap,parts
+	real(8),intent(in) :: dx
+	real(8),dimension(:),allocatable,intent(in) :: dimensions
+	character(3),dimension(:),allocatable,intent(in) :: material_list,names
+
+	integer,dimension(:),allocatable,intent(out) :: material_index_cells
+
+	integer,dimension(:),allocatable :: parts_sum
+	integer :: regions, region_counter, i, j
+	real(8),dimension(:),allocatable :: x_coords, mesh
+	character(3),dimension(:),allocatable :: material_region, material_cells
+	real(8) :: mesh_tol
+
+	allocate(parts_sum(pins))
+	parts_sum = 0
+	do i = 1,pins
+		do j = 1,i
+			parts_sum(i) = parts_sum(i) + parts(j)
+		enddo
+	enddo
+
+	regions = 0
+	do i = 1,npin
+		regions = regions + parts(pinmap(i))
+	enddo
+	allocate(x_coords(regions))
+	allocate(material_region(regions))
+
+	region_counter = 1
+	do i = 1,npin
+		x_coords(region_counter:(region_counter + parts(pinmap(i)) - 1)) =  &
+			& x_coords(region_counter - 1) + dimensions((parts_sum(pinmap(i)) - parts(pinmap(i)) + 1):parts_sum(pinmap(i)))
+		material_region(region_counter:(region_counter + parts(pinmap(i)) - 1)) = &
+			& material_list((parts_sum(pinmap(i)) - parts(pinmap(i)) + 1):parts_sum(pinmap(i)))
+		region_counter = region_counter + parts(pinmap(i))
+	enddo
+	! total_length = x_coords(regions)
+
+	allocate(mesh(cells))
+	allocate(material_cells(cells))
+	allocate(material_index_cells(cells))
+	mesh(1) = dx
+	do i = 2,cells
+		mesh(i) = mesh(i - 1) + dx
+	enddo
+
+	mesh_tol = 1.0d-3
+	do i = 1,cells
+		do j = 1,regions
+			if ((mesh(i) - x_coords(j)) .lt. mesh_tol) then
+				material_cells(i) = material_region(j)
+				exit
+			endif
+		enddo
+	enddo
+
+	material_index_cells = 0
+	do i = 1,cells
+		do j = 1,material
+			if (material_cells(i) .eq. names(j)) then
+				material_index_cells(i) = j
+				exit
+			endif
+		enddo
+	enddo
+
+endsubroutine meshbuild
+
+subroutine xsbuild(material_index_cells,cells,group,t_in,tr_in,d_in,a_in,c_in,f_in,nu_in,x_in,r_in,s_in,t,tr,d,a,c,f,nu,x,r,s)
+	IMPLICIT NONE
+
+	integer,dimension(:),allocatable,intent(in) :: material_index_cells
+	integer,intent(in) :: cells, group
+	real(8),dimension(:,:),allocatable,intent(in) :: t_in,tr_in,d_in,a_in,c_in,f_in,nu_in,x_in,r_in
+	real(8),dimension(:,:,:),allocatable,intent(in) :: s_in
+	real(8),dimension(:,:),allocatable,intent(out) :: t,tr,d,a,c,f,nu,x,r
+	real(8),dimension(:,:,:),allocatable,intent(out) :: s
+
+	integer :: i
+
+	call allocatexs(t,tr,d,a,c,f,nu,x,r,s,cells,group)
+	do i = 1,cells
+		t(i,:) = t_in(material_index_cells(i),:)
+		tr(i,:) = tr_in(material_index_cells(i),:)
+		d(i,:) = d_in(material_index_cells(i),:)
+		a(i,:) = a_in(material_index_cells(i),:)
+		c(i,:) = c_in(material_index_cells(i),:)
+		f(i,:) = f_in(material_index_cells(i),:)
+		nu(i,:) = nu_in(material_index_cells(i),:)
+		x(i,:) = x_in(material_index_cells(i),:)
+		r(i,:) = r_in(material_index_cells(i),:)
+		s(i,:,:) = s_in(material_index_cells(i),:,:)
+	enddo
+
+endsubroutine xsbuild
+
+subroutine allocatexs(t,tr,d,a,c,f,nu,x,r,s,dim1,dim2)
 	IMPLICIT NONE
 	real(8),dimension(:,:),allocatable,intent(inout) :: t, tr, d, a, c, f, nu, x, r
 	real(8),dimension(:,:,:),allocatable,intent(inout) :: s
-	integer,intent(in) :: material,group
+	integer,intent(in) :: dim1,dim2
 
-	allocate(t(material,group)) ! total
-	allocate(tr(material,group)) ! transport
-	allocate(d(material,group)) ! diffusion
-	allocate(a(material,group)) ! abssorption
-	allocate(c(material,group)) ! capture
-	allocate(f(material,group)) ! fission
-	allocate(nu(material,group)) ! nu_f
-	allocate(x(material,group))  ! chi
-	allocate(r(material,group)) ! removal
-	allocate(s(material,group,group)) ! scattering (2d)
+	allocate(t(dim1,dim2)) ! total
+	allocate(tr(dim1,dim2)) ! transport
+	allocate(d(dim1,dim2)) ! diffusion
+	allocate(a(dim1,dim2)) ! abssorption
+	allocate(c(dim1,dim2)) ! capture
+	allocate(f(dim1,dim2)) ! fission
+	allocate(nu(dim1,dim2)) ! nu_f
+	allocate(x(dim1,dim2))  ! chi
+	allocate(r(dim1,dim2)) ! removal
+	allocate(s(dim1,dim2,dim2)) ! scattering (2d)
+
 endsubroutine allocatexs
 
 

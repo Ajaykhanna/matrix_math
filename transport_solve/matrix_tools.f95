@@ -272,13 +272,6 @@ subroutine matrixsolve(row_coeff,col_coeff,mat,row_ans,ans,sol)
 	real(8) :: lower_sum, upper_sum
 	real(8),dimension(:,:),allocatable :: lower, upper
 
-	integer :: max_iteration, z, n, x, min_non_zero, max_non_zero
-	real(8) :: pivot_tol, store_ans
-	real(8),dimension(:),allocatable :: store_row
-	integer,dimension(:),allocatable :: non_zero
-	logical,dimension(:),allocatable :: done
-	logical :: diagonal_check
-
 	101 format(a)
 	
 	if (col_coeff .ne. row_ans) stop('not sure that is a linear system...')
@@ -307,6 +300,39 @@ subroutine matrixsolve(row_coeff,col_coeff,mat,row_ans,ans,sol)
 	enddo
 
 endsubroutine matrixsolve
+
+subroutine loweruppersolve(row_coeff,col_coeff,lower,upper,row_ans,ans,sol)
+	IMPLICIT NONE
+	integer,intent(in) :: row_coeff, col_coeff, row_ans
+	integer :: i, j
+	real(8),dimension(:,:),intent(in) :: lower, upper
+	real(8),dimension(:),intent(in) :: ans
+	real(8),dimension(:),intent(out),allocatable :: sol
+	real(8),dimension(:),allocatable :: y
+	real(8) :: lower_sum, upper_sum
+
+	if (col_coeff .ne. row_ans) stop('not sure that is a linear system...')
+	allocate(sol(row_coeff),y(row_coeff))
+
+	do i = 1,row_coeff
+		lower_sum = 0.0d0
+		do j = 1,(i - 1)
+			lower_sum = lower_sum + (lower(i,j) * y(j))
+		enddo
+		y(i) = (ans(i) - lower_sum) / lower(i,i)
+	enddo
+	
+	! backward subtitution (upper matrix)
+	do i = row_coeff,1,-1
+		upper_sum = 0.0d0
+		do j = (i + 1),row_coeff
+			upper_sum = upper_sum + upper(i,j) * sol(j)
+		enddo
+		sol(i) = (y(i) - upper_sum) / upper(i,i)
+	enddo
+
+endsubroutine loweruppersolve
+
 
 subroutine matrixread(unit_num,fname,row,col,mat)
 	IMPLICIT NONE

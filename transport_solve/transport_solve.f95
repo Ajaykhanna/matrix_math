@@ -9,7 +9,7 @@ character(3),dimension(:),allocatable :: names
 real(8),dimension(:,:),allocatable :: t_in, tr_in, d_in, a_in, c_in, f_in, nu_in, x_in, r_in
 real(8),dimension(:,:,:),allocatable :: s_in
 
-integer :: i,j,ios
+integer :: i,j,ios, n
 
 integer :: cells
 real(8) :: dx
@@ -20,10 +20,10 @@ real(8) :: total_length
 real(8),dimension(:,:),allocatable :: t, tr, d, a, c, f, nu, x, r
 real(8),dimension(:,:,:),allocatable :: s
 
-real(8),dimension(:,:,:),allocatable :: A_mat
+real(8),dimension(:,:,:),allocatable :: A_mat, A_mat_lower, A_mat_upper
 real(8),dimension(:,:,:),allocatable :: phi, phibar, current
 real(8),dimension(:,:,:),allocatable :: Q_f, Q_up, Q_down, Q
-real(8),dimension(:,:),allocatable :: f_mat, y_mat, A_mat_g
+real(8),dimension(:,:),allocatable :: f_mat, y_mat, A_mat_g, A_mat_lower_g, A_mat_upper_g
 real(8),dimension(:),allocatable :: f_mat_g, y_mat_g
 integer :: g, g_prime, z, max_iteration
 real(8),dimension(:),allocatable :: k
@@ -75,8 +75,13 @@ total_length = real(cells,8) * dx
 !-----------------------------------------------------------------------------!
 
 ! build A_mat matrix of geometry/material properties
-allocate(A_mat((3 * cells + 2),(3 * cells + 2),group))
-allocate(A_mat_g((3 * cells + 2),(3 * cells + 2)))
+n = (3 * cells + 2)
+allocate(A_mat(n,n,group))
+allocate(A_mat_lower(n,n,group))
+allocate(A_mat_upper(n,n,group))
+allocate(A_mat_lower_g(n,n))
+allocate(A_mat_upper_g(n,n))
+allocate(A_mat_g(n,n))
 A_mat(:,:,:) = 0.0d0
 do g = 1,group
 	do i = 1,cells
@@ -98,6 +103,17 @@ A_mat((3 * cells + 1),1,:) = -1.0d0
 A_mat((3 * cells + 1),3,:) = 1.0d0
 A_mat((3 * cells + 2),(3 * cells + 1),:) = -1.0d0
 A_mat((3 * cells + 2),(3 * cells    ),:) = 1.0d0
+
+! do g = 1,group
+! 	A_mat_g = A_mat(:,:,g)
+
+
+! 	write(*,'(a,i3)') 'decompose - group ',g
+! 	call matrixdecompose(n,n,A_mat_g,A_mat_lower_g,A_mat_upper_g)
+
+! 	A_mat_lower(:,:,g) = A_mat_lower_g
+! 	A_mat_upper(:,:,g) = A_mat_upper_g
+! enddo
 
 
 ! initial guesses
@@ -172,8 +188,13 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 		A_mat_g = A_mat(:,:,g)
 		f_mat_g = f_mat(:,g)
 		y_mat_g = y_mat(:,g)
+
+		A_mat_lower_g = A_mat_lower(:,:,g)
+		A_mat_upper_g = A_mat_upper(:,:,g)
 		
 		call matrixsolve((3 * cells + 2),(3 * cells + 2),A_mat_g,(3 * cells + 2),f_mat_g,y_mat_g)
+		! call nonzerodiag(n,n,A_mat_g,f_mat_g)	
+		! call loweruppersolve(n,n,A_mat_lower_g,A_mat_upper_g,n,f_mat_g,y_mat_g)
 
 		write(*,'(i3,a,i3)') z, ' , ', g
 		if (isnan(y_mat_g(1))) stop('y is nan')
@@ -201,7 +222,7 @@ do while ((phibarerror .gt. epsilon_phi) .or. (kerror .gt. epsilon_k))
 			denominator = denominator + nu(i,g_prime) * f(i,g_prime) * phibar(i,g_prime,(z - 1)) * dx
 		enddo
 	enddo
-	write(*,*) numerator, denominator
+	! write(*,*) numerator, denominator
 	k(z) = k(z - 1) * (numerator / denominator)
 
 	! make sure k is positive
